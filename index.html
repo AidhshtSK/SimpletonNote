@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SimpleTonNote</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script id="appdata" type="application/json">{}</script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-theme="dark">
+<div id="ctx"></div>
+<div id="sb">
+  <div class="sb-logo">
+    <div class="sb-gem">✦</div>
+    <span class="sb-wm">SimpleTonNote</span>
+  </div>
+  <div class="pbar">
+    <button class="pbtn" onclick="togglePDD()">
+      <span id="pico">📁</span>
+      <span class="pname" id="pname">Default</span>
+      <span style="color:var(--t3);font-size:10px">▾</span>
+    </button>
+    <div class="pdd" id="pdd"></div>
+  </div>
+  <div class="sb-srch" style="position:relative">
+    <span class="sic">⌕</span>
+    <input class="si" id="si" placeholder="Search…" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" onblur="setTimeout(()=>hideSrch(),180)">
+    <div class="srchdd" id="srchdd" style="display:none"></div>
+  </div>
+  <div class="tagfbar" id="tagfbar"></div>
+  <div class="sb-body" id="sbbody"></div>
+  <div class="sb-bot">
+    <button class="ib" onclick="openAlgebra()" title="Algebra Solver">∑</button>
+    <button class="ib" onclick="openTrash()" title="Trash">🗑</button>
+    <button class="ib" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="ib" onclick="toggleSB()" title="Collapse" style="margin-left:auto">‹</button>
+  </div>
+</div>
+<div id="main">
+  <div id="topbar">
+    <button class="ib" onclick="toggleSB()" style="font-size:16px;padding:4px 7px">☰</button>
+    <div class="tb-tit" id="tbtit">SimpleTonNote</div>
+    <button class="ib" id="tpl-btn" style="display:none" onclick="showTemplates()">📋</button>
+    <button class="ib" id="exp-btn" style="display:none" onclick="doExport()">↗</button>
+    <span id="save-ind" class="save-ind" style="opacity:0">✓</span>
+  </div>
+  <div id="con">
+    <div class="welcome" id="welcome">
+      <div class="wgem">✦</div>
+      <h2>Welcome to SimpleTonNote</h2>
+      <p style="font-size:13px">Select or create a notebook to begin.</p>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+  <!-- App modules — load order matters -->
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/code.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/journal.js"></script>
+  <script src="js/algebra.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
