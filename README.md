@@ -1,0 +1,2 @@
+# SimpletonNote
+Notion? Obsidian?
