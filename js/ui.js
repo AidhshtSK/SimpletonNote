@@ -33,8 +33,11 @@ function renderSB(){
     });
     html+=`<div class="sbdiv"></div>`;
   }
-  // Special nav
+  // Modules section
+  html+=`<div class="sb-sec"><span class="sb-sec-lbl">Modules</span></div>`;
+  html+=`<div class="sb-nav${A.activeView==='home'?' on':''}" onclick="openHome()"><span class="nic">🏠</span> Home</div>`;
   html+=`<div class="sb-nav${A.activeView==='journal'?' on':''}" onclick="openJournal()"><span class="nic">📅</span> Daily Journal</div>`;
+  html+=`<div class="sb-nav${A.activeView==='tasks'?' on':''}" onclick="openTasks()"><span class="nic">✅</span> Tasks</div>`;
   html+=`<div class="sbdiv"></div>`;
   // Notebooks header
   html+=`<div class="sb-sec"><span class="sb-sec-lbl">Notebooks</span><button class="sb-sec-add" onclick="showAddNB()" title="New Notebook">+</button></div>`;
@@ -98,6 +101,7 @@ function selNB(id){
   renderSB();
 }
 
+
 // ═══════════════════════════════════════════
 // PROJECTS
 // ═══════════════════════════════════════════
@@ -142,6 +146,7 @@ function createProj(){
   renderSB();
 }
 
+
 // ═══════════════════════════════════════════
 // SEARCH
 // ═══════════════════════════════════════════
@@ -175,6 +180,7 @@ function srchGo(nbId,id,type){
   if(type==='pg') openPage(nbId,id);
   else selNB(nbId);
 }
+
 
 // ═══════════════════════════════════════════
 // TAGS
@@ -229,6 +235,7 @@ function renderTagBar(pgId){
     +`<span class="tag-add" onclick="addPageTag('${pgId}')">+ tag</span>`;
 }
 
+
 // ═══════════════════════════════════════════
 // FAVORITES / TRASH
 // ═══════════════════════════════════════════
@@ -282,6 +289,7 @@ function restoreT(idx){
 function permDel(idx){A.trash.splice(idx,1);saveA();openTrash();}
 function emptyTrash(){A.trash=[];saveA();openTrash();}
 
+
 // ═══════════════════════════════════════════
 // DRAG & DROP (notebooks + pages)
 // ═══════════════════════════════════════════
@@ -324,6 +332,7 @@ function pgDrop(e,toNbId){
   }
   _dragPg=null;_dragPgNb=null;
 }
+
 
 // ═══════════════════════════════════════════
 // CONTEXT MENUS
@@ -432,3 +441,5 @@ function doMovePg(fromNb,pgId,toNb,copy){
   A.pages[toNb].push(np);
   saveA();closeModal();renderSB();openPage(toNb,np.id);
 }
+
+

@@ -40,7 +40,7 @@ function renderJournal(){
         <div class="jcnav">
           <button onclick="_jCal.m--;if(_jCal.m<0){_jCal.m=11;_jCal.y--}renderJournal()">‹</button>
           <span class="jcmon">${months[m]} ${y}</span>
-          <button onclick="_jCal.m++;if(_jCal.m>11){_jCal.m=0;_jCal.y++}renderJournal()">›</button>
+          <button onclick="_jCal.m++;if(_jCal.m&gt;11){_jCal.m=0;_jCal.y++}renderJournal()">›</button>
         </div>
         <div class="jcg">${calHtml}</div>
       </div>
@@ -114,3 +114,5 @@ function setMood(ds,mood,el){
   document.querySelectorAll('.mc').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');saveA();
 }
+
+

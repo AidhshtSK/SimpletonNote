@@ -270,3 +270,5 @@ function fmtCoeff(n){return n===1?'':(n===-1?'-':String(n));}
 function fmtCoeffSign(n){if(n===0) return '';return n>0?'+'+fmtCoeff(n):fmtCoeff(n);}
 function fmtSign(n){if(n===0) return '';return n>0?'+'+n:String(n);}
 function round(n,d=6){return parseFloat(n.toFixed(d));}
+
+

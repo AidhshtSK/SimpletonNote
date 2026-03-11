@@ -20,18 +20,14 @@ function openSettings(){
     <div class="set-body">
       <!-- Save & Export -->
       <div class="set-sec">
-        <h3>💾 Save & Export</h3>
+        <h3>💾 Vault Export & Import</h3>
         <div class="set-row">
-          <div class="set-rl"><div class="slbl">Save as HTML file</div><div class="sdesc">Download a self-contained HTML file with all your data baked in</div></div>
-          <button class="sbtn prim" onclick="saveFile()">💾 Save File</button>
+          <div class="set-rl"><div class="slbl">Export vault</div><div class="sdesc">Download a .zip with every page as a readable file + full backup</div></div>
+          <button class="sbtn prim" onclick="exportAllJSON()">📦 Export Vault .zip</button>
         </div>
         <div class="set-row">
-          <div class="set-rl"><div class="slbl">Export backup (JSON)</div><div class="sdesc">Export all data as a JSON backup file</div></div>
-          <button class="sbtn" onclick="exportAllJSON()">📦 Export JSON</button>
-        </div>
-        <div class="set-row">
-          <div class="set-rl"><div class="slbl">Import</div><div class="sdesc">Import JSON backup, text, markdown, or image files</div></div>
-          <label class="sbtn" style="cursor:pointer">📂 Import <input type="file" style="display:none" multiple onchange="handleImport(this.files)"></label>
+          <div class="set-rl"><div class="slbl">Import vault</div><div class="sdesc">Restore from a vault .zip, or import .stn / .json / .txt / .md files</div></div>
+          <label class="sbtn" style="cursor:pointer">📂 Import <input type="file" style="display:none" accept=".zip,.stn,.json,.txt,.md" onchange="handleImport(this.files)"></label>
         </div>
       </div>
       <!-- Appearance -->
@@ -87,6 +83,7 @@ function clearAll(){
   toast('All data cleared');
 }
 
+
 // ═══════════════════════════════════════════
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════════
@@ -106,12 +103,14 @@ window.addEventListener('blur',()=>saveA());
 // Periodic save every 30s as last resort
 setInterval(saveA, 30000);
 
+
 // ═══════════════════════════════════════════
 // NOTEBOOK TASKS SHORTCUT (sidebar via context)
 // ═══════════════════════════════════════════
 // When right-clicking a notebook, also allow opening tasks
 // This is handled in nbCtx above — but we can add a nav item:
 function openNBTasks(nbId){openTasks(nbId);}
+
 
 // ═══════════════════════════════════════════
 // INIT COMPLETE

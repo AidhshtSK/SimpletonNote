@@ -75,6 +75,7 @@ function getAllTasks(nbId){
   return Object.values(A.tasks).flat();
 }
 
+let _tkDragId=null,_tkDragNb=null;
 function renderTkList(nbId){
   const body=document.getElementById('tk-content');
   const tasks=getAllTasks(nbId);
@@ -100,7 +101,13 @@ function renderTkList(nbId){
     html+=`<div class="tkg"><div class="tkg-lbl">${groupLabels[key]}</div>`;
     tks.forEach(t=>{
       const overdue=t.dueDate&&t.dueDate<today&&!t.done;
-      html+=`<div class="tki${t.done?' done':''}" id="tki_${t.id}">
+      html+=`<div class="tki${t.done?' done':''}" id="tki_${t.id}" draggable="true"
+        ondragstart="_tkDragId='${t.id}';_tkDragNb='${nbId||''}';event.currentTarget.style.opacity='.45'"
+        ondragend="event.currentTarget.style.opacity='';_tkDragId=null"
+        ondragover="event.preventDefault();event.currentTarget.classList.add('tk-drop-over')"
+        ondragleave="event.currentTarget.classList.remove('tk-drop-over')"
+        ondrop="event.currentTarget.classList.remove('tk-drop-over');tkReorder('${t.id}','${nbId||''}')">
+        <span class="tk-grip">⠿</span>
         <input type="checkbox" class="tcbx" ${t.done?'checked':''} onchange="toggleTk('${t.id}','${nbId||''}',this)">
         <div class="tcon">
           <span class="ttxt" contenteditable="true" onblur="renameTk('${t.id}','${nbId||''}',this.textContent)">${esc(t.name)}</span>
@@ -140,6 +147,18 @@ function findTask(id,nbId){
   if(!t) t=Object.values(A.tasks).flat().find(x=>x.id===id);
   return t;
 }
+function tkReorder(targetId,nbId){
+  if(!_tkDragId||_tkDragId===targetId) return;
+  const key=nbId||'global';
+  const arr=A.tasks[key];
+  if(!arr) return;
+  const fi=arr.findIndex(t=>t.id===_tkDragId);
+  const ti=arr.findIndex(t=>t.id===targetId);
+  if(fi<0||ti<0) return;
+  const [item]=arr.splice(fi,1);
+  arr.splice(ti,0,item);
+  saveA();renderTkList(nbId);
+}
 
 // ── TASK CALENDAR ──
 function renderTkCal(nbId){
@@ -158,7 +177,7 @@ function renderTkCal(nbId){
     <div class="tcnav">
       <button onclick="_tkCal.m--;if(_tkCal.m<0){_tkCal.m=11;_tkCal.y--}renderTkCal('${nbId||''}')">‹</button>
       <span class="tctit">${fullMonths[m]} ${y}</span>
-      <button onclick="_tkCal.m++;if(_tkCal.m>11){_tkCal.m=0;_tkCal.y++}renderTkCal('${nbId||''}')">›</button>
+      <button onclick="_tkCal.m++;if(_tkCal.m&gt;11){_tkCal.m=0;_tkCal.y++}renderTkCal('${nbId||''}')">›</button>
       <button onclick="showAddTaskModal('${nbId||''}')">+ Task</button>
     </div>
     <div class="tcgrid">${days.map(d=>`<div class="tcdl">${d}</div>`).join('')}`;
@@ -196,3 +215,5 @@ function saveQuickTk(id,nbId){
   if(t){t.name=document.getElementById('etk-name').value.trim();t.dueDate=document.getElementById('etk-date').value||'';}
   saveA();closeModal();renderTasks(nbId||'');
 }
+
+

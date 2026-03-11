@@ -9,7 +9,8 @@ const A = {
   settings:{theme:'dark',fontSize:15,mathBar:true,smartChips:true},
   currentProject:'p0',activeNotebook:null,activePage:null,activeView:null,gdrive:{},
   activeTagFilter:null,
-  _nbOpen:{}
+  _nbOpen:{},
+  homeWidgets:null
 };
 
 function loadA(){
@@ -43,6 +44,7 @@ function merge(d){
   if(d.favorites) A.favorites=d.favorites;
   if(d.settings) A.settings=Object.assign(A.settings,d.settings);
   if(d.currentProject) A.currentProject=d.currentProject;
+  if(d.homeWidgets) A.homeWidgets=d.homeWidgets;
 }
 
 let _saveIndicatorTimer=null;
@@ -119,42 +121,39 @@ function _idbLoad(cb){
 function exportData(){
   return {ver:VER,ts:Date.now(),projects:A.projects,notebooks:A.notebooks,
     pages:A.pages,tasks:A.tasks,journalEntries:A.journalEntries,trash:A.trash,
-    tags:A.tags,pageTags:A.pageTags,favorites:A.favorites,settings:A.settings};
+    tags:A.tags,pageTags:A.pageTags,favorites:A.favorites,settings:A.settings,
+    homeWidgets:A.homeWidgets||[]};
 }
 
-// Save-to-file: downloads self-contained HTML with data baked in
+// Save-to-file: downloads a .stn data file (JSON, only SimpleTonNote can open it)
+// Format: custom JSON with magic header so we can identify it on load
 function saveFile(){
   try{
     const data=exportData();
-    // First update the embedded appdata tag in memory
-    const el=document.getElementById('appdata');
-    if(el) el.textContent=JSON.stringify(data);
-    // Get updated HTML
-    let fileHtml=document.documentElement.outerHTML;
-    // Ensure the appdata tag has the latest data
-    const tag='<script id="appdata" type="application/json">';
-    const closeTag='<\/script>';
-    const si=fileHtml.indexOf(tag);
-    if(si>-1){
-      const ei=fileHtml.indexOf('</'+'script>',si+tag.length);
-      if(ei>-1){
-        fileHtml=fileHtml.substring(0,si+tag.length)+JSON.stringify(data)+fileHtml.substring(ei);
-      }
-    }
-    const blob=new Blob([fileHtml],{type:'text/html;charset=utf-8'});
+    const payload={
+      _stn:true,           // magic identifier
+      _ver:VER,
+      _saved:new Date().toISOString(),
+      ...data
+    };
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/octet-stream'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download='SimpleTonNote.html';
+    const ts=new Date().toISOString().slice(0,10);
+    a.download=`SimpleTonNote_${ts}.stn`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(a.href),10000);
-    toast('💾 Saved! Open SimpleTonNote.html in your browser to restore.');
+    toast('💾 Saved as .stn file — use ⚙ Import to restore.');
   }catch(e){
     toast('❌ Save failed: '+e.message);
     console.error('saveFile error',e);
   }
 }
+
+// (importStnFile removed — use handleImport zip vault)
+
 
 // ═══════════════════════════════════════════
 // GOOGLE DRIVE OAUTH2 (PKCE-free token client)
@@ -163,6 +162,7 @@ function saveFile(){
 // Get one at: https://console.cloud.google.com → APIs & Services → Credentials
 // Authorized JS origins: add your domain (or http://localhost for local use)
 // Authorized redirect URIs: same as above
+
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
@@ -182,3 +182,5 @@ function applySettings(){
   document.body.setAttribute('data-theme',s.theme||'dark');
   document.documentElement.style.setProperty('--fs',(s.fontSize||15)+'px');
 }
+
+

@@ -62,35 +62,28 @@ function proceedAddPage(){
   setTimeout(()=>showTemplateStep(type,name),50);
 }
 function showTemplateStep(type,name){
+  window._addPageType=type;
+  window._addPageName=name;
   if(type!=='rich'){
-    // No templates for non-rich types
     finalCreatePage(type,name,null);
     return;
   }
   showModal(`<h2>Choose a Template</h2>
-    <p style="font-size:13px;color:var(--t3);margin-bottom:12px">Or start blank</p>
-    <div class="tgrid" id="tplgrid">${ALL_TEMPLATES.map((t,i)=>`<div class="tcard" id="tplc${i}" onclick="selTpl(${i},this)">
+    <p style="font-size:13px;color:var(--t3);margin-bottom:12px">Click a template to use it, or start blank</p>
+    <div class="tgrid">${ALL_TEMPLATES.map((t,i)=>`<div class="tcard" onclick="pickTpl(${i})">
       <h3>${t.icon} ${t.name}</h3><p>${t.desc}</p>
     </div>`).join('')}</div>
-    <div class="mbtns"><button class="bs" onclick="closeModal();finalCreatePage('${type}','${esc(name)}',null)">Blank Page</button>
-    <button class="bp" id="tpl-ok" onclick="applyTplStep('${type}','${esc(name)}')" disabled style="opacity:.5">Use Template →</button></div>`);
-  window._selTplIdx=null;
+    <div class="mbtns"><button class="bs" onclick="closeModal();finalCreatePage(window._addPageType,window._addPageName,null)">Blank Page</button></div>`);
 }
-function selTpl(i,el){
+function pickTpl(i){
+  const tpl=ALL_TEMPLATES[i];
   window._selTplIdx=i;
-  document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-  const b=document.getElementById('tpl-ok');
-  if(b){b.disabled=false;b.style.opacity='1';}
-}
-function applyTplStep(type,name){
-  const idx=window._selTplIdx;
-  if(idx===null||idx===undefined){toast('Choose a template or click Blank Page');return;}
-  const tpl=ALL_TEMPLATES[idx];
   closeModal();
-  setTimeout(()=>showTplFillIn(type,name,tpl),50);
+  setTimeout(()=>showTplFillIn(window._addPageType,window._addPageName,tpl),50);
 }
 function showTplFillIn(type,name,tpl){
+  window._addPageType=type;
+  window._addPageName=name;
   if(!tpl.fields||!tpl.fields.length){
     finalCreatePage(type,name,tpl.content);
     return;
@@ -102,16 +95,20 @@ function showTplFillIn(type,name,tpl){
   showModal(`<h2>${tpl.icon} ${tpl.name}</h2>
     <p style="font-size:12px;color:var(--t3);margin-bottom:12px">Fill in the blanks (or leave empty for defaults)</p>
     ${fieldsHtml}
-    <div class="mbtns"><button class="bs" onclick="closeModal();finalCreatePage('${type}','${esc(name)}','${encodeURIComponent(tpl.content)}')">Skip</button>
-    <button class="bp" onclick="doFillTpl('${type}','${esc(name)}',${window._selTplIdx})">Create Page</button></div>`);
+    <div class="mbtns"><button class="bs" onclick="closeModal();finalCreatePage(window._addPageType,window._addPageName,null)">Skip</button>
+    <button class="bp" onclick="doFillTpl(window._selTplIdx)">Create Page</button></div>`);
 }
-function doFillTpl(type,name,tplIdx){
+function doFillTpl(tplIdx){
+  const type=window._addPageType;
+  const name=window._addPageName;
   const tpl=ALL_TEMPLATES[tplIdx];
   let content=tpl.content;
   (tpl.fields||[]).forEach((f,i)=>{
     const val=document.getElementById('tf'+i)?.value||f.default||'';
     content=content.replace(new RegExp('\\{\\{'+f.key+'\\}\\}','g'),esc(val));
   });
+  // Also apply the page name into any {{pagename}} placeholder in the template
+  content=content.replace(/\{\{pagename\}\}/g,esc(name));
   closeModal();
   finalCreatePage(type,name,content);
 }
@@ -149,6 +146,7 @@ function openPage(nbId,pgId){
   else if(pg.type==='quiz') openQuiz(pg);
 }
 
+
 // ═══════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════
@@ -178,144 +176,171 @@ function showWideModal(html){
 }
 function closeModal(){const ov=document.getElementById('movl');if(ov) ov.style.display='none';}
 
+
 // ═══════════════════════════════════════════
-// TEMPLATES (ADHD-optimized + classic)
+// TEMPLATES — organized by category
 // ═══════════════════════════════════════════
+const TEMPLATE_CATS = {
+  'Blank':       {icon:'📄', color:'var(--t3)'},
+  'ADHD Study':  {icon:'🧠', color:'#a78bfa'},
+  'Study':       {icon:'📚', color:'#60a5fa'},
+  'Work':        {icon:'💼', color:'#34d399'},
+  'Creative':    {icon:'🎨', color:'#f472b6'},
+  'Personal':    {icon:'🌱', color:'#fb923c'},
+  'Technical':   {icon:'💻', color:'#22d3ee'},
+  'Meeting':     {icon:'🗒', color:'#fbbf24'},
+};
+
 const ALL_TEMPLATES = [
   // ── BLANK ──
-  {icon:'📄',name:'Blank',desc:'Empty page',fields:[],content:''},
+  {cat:'Blank',icon:'📄',name:'Blank',desc:'Empty page',fields:[],content:''},
 
-  // ── ADHD STUDY TEMPLATES ──
-  {icon:'🧠',name:'Brain Dump',desc:'ADHD: unload your mind first',
-   fields:[{key:'topic',label:'Topic/Subject',placeholder:'e.g. Chapter 5 Biology',default:''}],
-   content:`<h1>🧠 Brain Dump — {{topic}}</h1><p style="color:var(--t3);font-style:italic">Dump everything you know or need to do. No order required.</p><h2>📤 Everything on my mind</h2><p></p><p></p><p></p><h2>🔴 Must do TODAY</h2><ul><li></li><li></li></ul><h2>🟡 Should do this week</h2><ul><li></li><li></li></ul><h2>🟢 Nice to do eventually</h2><ul><li></li><li></li></ul>`},
-
-  {icon:'⏱',name:'Pomodoro Notes',desc:'ADHD: 25-min focus sessions',
-   fields:[{key:'subject',label:'Subject',placeholder:'e.g. Math Chapter 3',default:''},{key:'goal',label:'Session Goal',placeholder:'e.g. Complete exercises 1-10',default:''}],
-   content:`<h1>⏱ Pomodoro Session — {{subject}}</h1><p><strong>Goal:</strong> {{goal}}</p><h2>🍅 Session 1 (25 min)</h2><p><em>Start time: ___</em></p><p></p><h2>☕ Break Notes (5 min)</h2><p></p><h2>🍅 Session 2 (25 min)</h2><p><em>Start time: ___</em></p><p></p><h2>☕ Break Notes (5 min)</h2><p></p><h2>🍅 Session 3 (25 min)</h2><p><em>Start time: ___</em></p><p></p><h2>✅ What I accomplished</h2><ul><li></li><li></li></ul><h2>🔄 Pick up next time</h2><ul><li></li></ul>`},
-
-  {icon:'🗂',name:'Cornell Notes (ADHD)',desc:'Structured with cues & summary',
+  // ── ADHD STUDY ──
+  {cat:'ADHD Study',icon:'🧠',name:'Brain Dump',desc:'Unload your mind first',
+   fields:[{key:'topic',label:'Topic',placeholder:'e.g. Chapter 5 Biology',default:''}],
+   content:`<h1>🧠 Brain Dump — {{topic}}</h1><p style="color:var(--t3);font-style:italic">Dump everything first. No order required.</p><h2>📤 Everything on my mind</h2><p></p><h2>🔴 Must do TODAY</h2><ul><li></li></ul><h2>🟡 Should do this week</h2><ul><li></li></ul><h2>🟢 Nice to do eventually</h2><ul><li></li></ul>`},
+  {cat:'ADHD Study',icon:'⏱',name:'Pomodoro Notes',desc:'25-min focus sessions',
+   fields:[{key:'subject',label:'Subject',placeholder:'e.g. Math Ch3',default:''},{key:'goal',label:'Session Goal',placeholder:'e.g. Do exercises 1-10',default:''}],
+   content:`<h1>⏱ Pomodoro Session — {{subject}}</h1><p><strong>Goal:</strong> {{goal}}</p><h2>🍅 Session 1 (25 min)</h2><p><em>Start: ___</em></p><p></p><h2>☕ Break (5 min)</h2><p></p><h2>🍅 Session 2 (25 min)</h2><p></p><h2>✅ Accomplished</h2><ul><li></li></ul><h2>🔄 Pick up next time</h2><ul><li></li></ul>`},
+  {cat:'ADHD Study',icon:'🗂',name:'Cornell Notes (ADHD)',desc:'Cues + notes + summary',
    fields:[{key:'topic',label:'Topic',placeholder:'e.g. Photosynthesis',default:''},{key:'date',label:'Date',placeholder:'e.g. March 9',default:''}],
-   content:`<h1>🗂 Cornell Notes — {{topic}}</h1><p style="font-size:12px;color:var(--t3)">Date: {{date}}</p><table><tr><th style="width:30%">❓ Cue Questions<br><em style="font-size:11px;font-weight:400">Write after class</em></th><th>📝 Notes<br><em style="font-size:11px;font-weight:400">During class/reading</em></th></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table><h2>📋 Summary (write in YOUR words)</h2><p></p><h2>⭐ Key Terms</h2><ul><li><strong>Term:</strong> definition</li></ul>`},
-
-  {icon:'🔁',name:'Spaced Repetition',desc:'ADHD: recall-based study',
+   content:`<h1>🗂 Cornell Notes — {{topic}}</h1><p style="font-size:12px;color:var(--t3)">Date: {{date}}</p><table><tr><th style="width:30%">❓ Cue Questions</th><th>📝 Notes</th></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table><h2>📋 Summary</h2><p></p><h2>⭐ Key Terms</h2><ul><li><strong>Term:</strong> definition</li></ul>`},
+  {cat:'ADHD Study',icon:'🔁',name:'Spaced Repetition',desc:'Recall-based study',
    fields:[{key:'topic',label:'Topic',placeholder:'e.g. Spanish Vocab',default:''}],
-   content:`<h1>🔁 Spaced Repetition — {{topic}}</h1><p style="font-size:12px;color:var(--t3);font-style:italic">Study this: Day 1 → Day 3 → Day 7 → Day 14 → Day 30</p><h2>📚 What I'm learning</h2><p></p><h2>✏️ Write it from memory (don't peek!)</h2><p></p><p></p><h2>✅ What I got right</h2><ul><li></li></ul><h2>❌ What I got wrong / need to review</h2><ul><li></li></ul><h2>💡 My own example or memory hook</h2><p></p><h2>📅 Review schedule</h2><table><tr><th>Review</th><th>Date</th><th>Score</th></tr><tr><td>1st (tomorrow)</td><td></td><td>/10</td></tr><tr><td>2nd (day 3)</td><td></td><td>/10</td></tr><tr><td>3rd (day 7)</td><td></td><td>/10</td></tr></table>`},
-
-  {icon:'🗺',name:'Mind Map Notes',desc:'ADHD: visual-spatial notes',
+   content:`<h1>🔁 Spaced Repetition — {{topic}}</h1><p style="font-size:12px;color:var(--t3)">Review: Day 1 → 3 → 7 → 14 → 30</p><h2>📚 What I am learning</h2><p></p><h2>✏️ From memory (no peeking)</h2><p></p><h2>✅ Got right</h2><ul><li></li></ul><h2>❌ Got wrong</h2><ul><li></li></ul><h2>💡 Memory hook</h2><p></p><h2>📅 Schedule</h2><table><tr><th>Review</th><th>Date</th><th>Score</th></tr><tr><td>1st (day 1)</td><td></td><td>/10</td></tr><tr><td>2nd (day 3)</td><td></td><td>/10</td></tr><tr><td>3rd (day 7)</td><td></td><td>/10</td></tr></table>`},
+  {cat:'ADHD Study',icon:'🗺',name:'Mind Map Notes',desc:'Visual-spatial notes',
    fields:[{key:'central',label:'Central Topic',placeholder:'e.g. World War II',default:''}],
-   content:`<h1>🗺 Mind Map Notes — {{central}}</h1><p style="font-style:italic;color:var(--t3);font-size:13px">Expand each branch with details, examples, and connections</p><h2>🌿 Branch 1: ___</h2><ul><li>Sub-idea: </li><li>Example: </li><li>Connection: </li></ul><h2>🌿 Branch 2: ___</h2><ul><li>Sub-idea: </li><li>Example: </li><li>Connection: </li></ul><h2>🌿 Branch 3: ___</h2><ul><li>Sub-idea: </li><li>Example: </li></ul><h2>🌿 Branch 4: ___</h2><ul><li>Sub-idea: </li><li>Example: </li></ul><h2>🔗 How branches connect</h2><p></p>`},
-
-  {icon:'📦',name:'Chunking Notes',desc:'ADHD: break into small chunks',
+   content:`<h1>🗺 Mind Map — {{central}}</h1><h2>🌿 Branch 1: ___</h2><ul><li>Sub-idea: </li><li>Example: </li></ul><h2>🌿 Branch 2: ___</h2><ul><li>Sub-idea: </li><li>Example: </li></ul><h2>🌿 Branch 3: ___</h2><ul><li>Sub-idea: </li></ul><h2>🔗 How branches connect</h2><p></p>`},
+  {cat:'ADHD Study',icon:'📦',name:'Chunking Notes',desc:'Break into small pieces',
    fields:[{key:'topic',label:'Topic',placeholder:'e.g. Essay Writing',default:''}],
-   content:`<h1>📦 Chunked Study — {{topic}}</h1><p style="color:var(--t3);font-size:13px;font-style:italic">Break big topics into small, conquerable chunks</p><h2>📦 Chunk 1 (15 min max)</h2><p><strong>Focus:</strong> </p><p><strong>Key point:</strong> </p><p><strong>My example:</strong> </p><h2>📦 Chunk 2 (15 min max)</h2><p><strong>Focus:</strong> </p><p><strong>Key point:</strong> </p><p><strong>My example:</strong> </p><h2>📦 Chunk 3 (15 min max)</h2><p><strong>Focus:</strong> </p><p><strong>Key point:</strong> </p><h2>🏆 3 things I'll definitely remember</h2><ol><li></li><li></li><li></li></ol>`},
+   content:`<h1>📦 Chunking Notes — {{topic}}</h1><h2>📦 Chunk 1 — Small piece</h2><p></p><ul><li>Key point: </li><li>Example: </li></ul><h2>📦 Chunk 2</h2><p></p><ul><li>Key point: </li></ul><h2>📦 Chunk 3</h2><p></p><h2>🔗 How chunks connect</h2><p></p><h2>✅ Summary (3 sentences)</h2><p></p>`},
 
-  {icon:'🎯',name:'Active Recall',desc:'ADHD: test yourself, no peeking',
-   fields:[{key:'topic',label:'Topic',placeholder:'e.g. Cell Division',default:''}],
-   content:`<h1>🎯 Active Recall — {{topic}}</h1><p style="color:var(--t3);font-size:13px;font-style:italic">Cover the answers. Write from memory. Then check.</p><table><tr><th>Question</th><th>My Answer (from memory)</th><th>Correct? ✓/✗</th></tr><tr><td>What is ___?</td><td></td><td></td></tr><tr><td>How does ___?</td><td></td><td></td></tr><tr><td>Why does ___?</td><td></td><td></td></tr><tr><td>Explain ___</td><td></td><td></td></tr><tr><td>What's the difference between ___ and ___?</td><td></td><td></td></tr></table><h2>📊 Score: ___ / ___</h2><h2>🔄 Review these again</h2><ul><li></li></ul>`},
+  // ── STUDY ──
+  {cat:'Study',icon:'📖',name:'Lecture Notes',desc:'Standard lecture template',
+   fields:[{key:'course',label:'Course',placeholder:'e.g. Biology 101',default:''},{key:'date',label:'Date',placeholder:'',default:''}],
+   content:`<h1>📖 {{course}} — {{date}}</h1><h2>🎯 Learning Objectives</h2><ul><li></li></ul><h2>📝 Main Notes</h2><p></p><h2>📌 Key Definitions</h2><ul><li><strong>Term:</strong> </li></ul><h2>❓ Questions to Follow Up</h2><ul><li></li></ul>`},
+  {cat:'Study',icon:'🔬',name:'Research Notes',desc:'Source-based research',
+   fields:[{key:'topic',label:'Topic',placeholder:'e.g. Climate Change',default:''}],
+   content:`<h1>🔬 Research: {{topic}}</h1><h2>❓ Key Questions</h2><ul><li></li></ul><h2>📚 Sources</h2><ul><li><a href="#">Source 1</a></li></ul><h2>💡 Main Findings</h2><p></p><h2>⚖️ For / Against</h2><table><tr><th>For</th><th>Against</th></tr><tr><td></td><td></td></tr></table><h2>🏁 Conclusion</h2><p></p>`},
+  {cat:'Study',icon:'📝',name:'Essay Outline',desc:'Structured essay plan',
+   fields:[{key:'title',label:'Essay Title/Topic',placeholder:'e.g. The French Revolution',default:''}],
+   content:`<h1>📝 Essay: {{title}}</h1><h2>🎯 Thesis Statement</h2><p></p><h2>📌 Introduction</h2><ul><li>Hook: </li><li>Context: </li><li>Thesis restate: </li></ul><h2>🏗 Body Paragraph 1</h2><ul><li>Topic sentence: </li><li>Evidence: </li><li>Analysis: </li></ul><h2>🏗 Body Paragraph 2</h2><ul><li>Topic sentence: </li><li>Evidence: </li></ul><h2>🏗 Body Paragraph 3</h2><ul><li>Topic sentence: </li><li>Evidence: </li></ul><h2>🏁 Conclusion</h2><p></p>`},
+  {cat:'Study',icon:'📚',name:'Reading List',desc:'Track books and notes',
+   fields:[],
+   content:`<h1>📚 Reading List</h1><table><tr><th>Title</th><th>Author</th><th>Status</th><th>Rating</th><th>Notes</th></tr><tr><td></td><td></td><td>To Read</td><td></td><td></td></tr><tr><td></td><td></td><td>Reading</td><td></td><td></td></tr><tr><td></td><td></td><td>Done</td><td>★★★★★</td><td></td></tr></table>`},
+  {cat:'Study',icon:'🗃',name:'Flashcard Page',desc:'Q&A pairs for review',
+   fields:[{key:'deck',label:'Deck Name',placeholder:'e.g. Spanish Vocab Ch1',default:''}],
+   content:`<h1>🗃 Flashcards — {{deck}}</h1><table><tr><th>❓ Question / Term</th><th>✅ Answer / Definition</th></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>`},
 
-  {icon:'✨',name:'ADHD Daily Focus',desc:'Daily structure & intentions',
-   fields:[{key:'date',label:'Date',placeholder:'e.g. Monday March 9',default:''}],
-   content:`<h1>✨ Daily Focus — {{date}}</h1><h2>🌅 Morning Check-in</h2><p><strong>Energy level:</strong> ○○○○○</p><p><strong>Focus level:</strong> ○○○○○</p><p><strong>Today I intend to:</strong> </p><h2>🎯 Top 3 (just 3!)</h2><ol><li></li><li></li><li></li></ol><h2>⚠️ Potential distractions to watch for</h2><ul><li></li></ul><h2>🧠 Notes / ideas / thoughts dump</h2><p></p><h2>🌙 End of day</h2><p><strong>Completed:</strong> </p><p><strong>Tomorrow's first task:</strong> </p>`},
+  // ── WORK ──
+  {cat:'Work',icon:'🗒',name:'Meeting Notes',desc:'Agenda, notes, actions',
+   fields:[{key:'title',label:'Meeting Title',placeholder:'e.g. Sprint Planning',default:''},{key:'date',label:'Date',placeholder:'',default:''}],
+   content:`<h1>🗒 {{title}} — {{date}}</h1><h2>👥 Attendees</h2><p></p><h2>📋 Agenda</h2><ul><li></li><li></li></ul><h2>📝 Notes</h2><p></p><h2>✅ Action Items</h2><ul><li>[ ] @person — task</li></ul><h2>📅 Next Meeting</h2><p></p>`},
+  {cat:'Work',icon:'🗺',name:'Project Plan',desc:'Goals, tasks, timeline',
+   fields:[{key:'project',label:'Project Name',placeholder:'e.g. Website Redesign',default:''}],
+   content:`<h1>🗺 Project: {{project}}</h1><h2>🎯 Goals</h2><p></p><h2>👥 Team</h2><table><tr><th>Name</th><th>Role</th><th>Contact</th></tr><tr><td></td><td></td><td></td></tr></table><h2>📅 Timeline</h2><table><tr><th>Phase</th><th>Start</th><th>End</th><th>Owner</th></tr><tr><td>Research</td><td></td><td></td><td></td></tr><tr><td>Design</td><td></td><td></td><td></td></tr><tr><td>Build</td><td></td><td></td><td></td></tr><tr><td>Launch</td><td></td><td></td><td></td></tr></table><h2>⚠️ Risks</h2><ul><li></li></ul>`},
+  {cat:'Work',icon:'🔁',name:'Weekly Review',desc:'Wins, struggles, next week',
+   fields:[{key:'week',label:'Week of',placeholder:'e.g. March 10',default:''}],
+   content:`<h1>🔁 Weekly Review — {{week}}</h1><h2>🏆 Wins</h2><ul><li></li></ul><h2>😤 Struggles</h2><ul><li></li></ul><h2>📊 Metrics</h2><table><tr><th>Metric</th><th>Target</th><th>Actual</th></tr><tr><td></td><td></td><td></td></tr></table><h2>📅 Next Week Focus</h2><ul><li></li></ul><h2>💡 One Lesson</h2><p></p>`},
+  {cat:'Work',icon:'📊',name:'Status Report',desc:'Weekly/monthly status update',
+   fields:[{key:'project',label:'Project',placeholder:'',default:''},{key:'period',label:'Period',placeholder:'e.g. Week 12',default:''}],
+   content:`<h1>📊 Status Report — {{project}}</h1><p><strong>Period:</strong> {{period}}</p><h2>🟢 On Track</h2><ul><li></li></ul><h2>🟡 At Risk</h2><ul><li></li></ul><h2>🔴 Blocked</h2><ul><li></li></ul><h2>📈 KPIs</h2><table><tr><th>Metric</th><th>Target</th><th>Actual</th><th>Status</th></tr><tr><td></td><td></td><td></td><td>🟢</td></tr></table><h2>🗓 Next Steps</h2><ul><li></li></ul>`},
+  {cat:'Work',icon:'💡',name:'Proposal',desc:'Business/project proposal',
+   fields:[{key:'title',label:'Proposal Title',placeholder:'e.g. New Feature X',default:''}],
+   content:`<h1>💡 Proposal: {{title}}</h1><h2>📋 Executive Summary</h2><p></p><h2>❓ Problem</h2><p></p><h2>✅ Proposed Solution</h2><p></p><h2>💰 Cost / Effort</h2><table><tr><th>Item</th><th>Cost</th><th>Timeline</th></tr><tr><td></td><td></td><td></td></tr></table><h2>📈 Expected Benefits</h2><ul><li></li></ul><h2>⚠️ Risks</h2><ul><li></li></ul>`},
 
-  {icon:'🔄',name:'Feynman Technique',desc:'ADHD: explain it simply',
-   fields:[{key:'concept',label:'Concept to learn',placeholder:'e.g. Quantum Entanglement',default:''}],
-   content:`<h1>🔄 Feynman Technique — {{concept}}</h1><p style="font-style:italic;color:var(--t3);font-size:13px">The best way to learn: explain it like you're teaching a 5-year-old</p><h2>Step 1: Explain in simple words</h2><p></p><h2>Step 2: Identify gaps (what confuses you?)</h2><ul><li></li><li></li></ul><h2>Step 3: Go back & study those gaps</h2><p></p><h2>Step 4: Simplify further (use an analogy)</h2><p><strong>It's like...</strong> </p><h2>⭐ One-sentence summary</h2><blockquote></blockquote>`},
+  // ── MEETING ──
+  {cat:'Meeting',icon:'🧭',name:'1-on-1',desc:'Manager/report 1:1 notes',
+   fields:[{key:'person',label:'With',placeholder:'e.g. Alex',default:''}],
+   content:`<h1>🧭 1-on-1 with {{person}}</h1><h2>😊 How are you doing?</h2><p></p><h2>✅ Last week updates</h2><ul><li></li></ul><h2>🚧 Blockers</h2><ul><li></li></ul><h2>🎯 Priorities this week</h2><ul><li></li></ul><h2>💬 Feedback / discussion</h2><p></p><h2>📌 Action items</h2><ul><li></li></ul>`},
+  {cat:'Meeting',icon:'🚀',name:'Retrospective',desc:'Sprint or project retro',
+   fields:[{key:'sprint',label:'Sprint / Period',placeholder:'e.g. Sprint 14',default:''}],
+   content:`<h1>🚀 Retrospective — {{sprint}}</h1><h2>😊 What went well?</h2><ul><li></li></ul><h2>😤 What could improve?</h2><ul><li></li></ul><h2>🧪 Experiments to try</h2><ul><li></li></ul><h2>✅ Action items</h2><ul><li>[ ] Owner — action</li></ul>`},
 
-  // ── MORE ADHD STUDY TEMPLATES ──
-  {icon:'🧩',name:'Concept Map',desc:'ADHD: connect ideas visually',
-   fields:[{key:'subject',label:'Subject',placeholder:'e.g. Ecosystems',default:''}],
-   content:`<h1>🧩 Concept Map — {{subject}}</h1><p style="color:var(--t3);font-size:13px">Write the main concept, then draw connections between ideas</p><h2>🎯 Main Concept</h2><blockquote></blockquote><h2>🔗 Related Concepts</h2><table><tr><th>Concept</th><th>How it connects</th><th>Example</th></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table><h2>🌟 The big picture (summary)</h2><p></p>`},
+  // ── TECHNICAL ──
+  {cat:'Technical',icon:'💻',name:'API Docs',desc:'Endpoint documentation',
+   fields:[{key:'api',label:'API / Service Name',placeholder:'e.g. User API v2',default:''}],
+   content:`<h1>💻 {{api}} Docs</h1><h2>🔐 Authentication</h2><p></p><h2>📡 Base URL</h2><p><code>https://api.example.com/v1</code></p><h2>📌 Endpoints</h2><h3>GET /resource</h3><table><tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr><tr><td></td><td>string</td><td>Yes</td><td></td></tr></table><h3>POST /resource</h3><p><strong>Body:</strong></p><p><code>{}</code></p><h2>⚠️ Error Codes</h2><table><tr><th>Code</th><th>Meaning</th></tr><tr><td>400</td><td>Bad Request</td></tr><tr><td>401</td><td>Unauthorized</td></tr></table>`},
+  {cat:'Technical',icon:'🐛',name:'Bug Report',desc:'Issue tracking template',
+   fields:[{key:'title',label:'Bug Title',placeholder:'e.g. Login fails on mobile',default:''}],
+   content:`<h1>🐛 Bug: {{title}}</h1><h2>📋 Summary</h2><p></p><h2>🔁 Steps to Reproduce</h2><ol><li></li><li></li><li></li></ol><h2>✅ Expected Behaviour</h2><p></p><h2>❌ Actual Behaviour</h2><p></p><h2>🌍 Environment</h2><table><tr><th>Property</th><th>Value</th></tr><tr><td>OS</td><td></td></tr><tr><td>Browser</td><td></td></tr><tr><td>Version</td><td></td></tr></table><h2>📎 Screenshots / Logs</h2><p></p>`},
+  {cat:'Technical',icon:'🏗',name:'System Design',desc:'Architecture document',
+   fields:[{key:'system',label:'System Name',placeholder:'e.g. Notification Service',default:''}],
+   content:`<h1>🏗 System Design: {{system}}</h1><h2>🎯 Goals & Requirements</h2><h3>Functional</h3><ul><li></li></ul><h3>Non-Functional</h3><ul><li>Latency: </li><li>Scale: </li></ul><h2>📐 Architecture Overview</h2><p></p><h2>🗄 Data Model</h2><table><tr><th>Entity</th><th>Fields</th><th>Notes</th></tr><tr><td></td><td></td><td></td></tr></table><h2>🔌 APIs / Interfaces</h2><p></p><h2>⚠️ Trade-offs</h2><ul><li></li></ul>`},
+  {cat:'Technical',icon:'📋',name:'Code Review',desc:'PR / code review notes',
+   fields:[{key:'pr',label:'PR / Branch',placeholder:'e.g. feature/login-v2',default:''}],
+   content:`<h1>📋 Code Review — {{pr}}</h1><h2>✅ Looks good</h2><ul><li></li></ul><h2>💬 Suggestions</h2><ul><li></li></ul><h2>🔴 Must change</h2><ul><li></li></ul><h2>❓ Questions</h2><ul><li></li></ul>`},
 
-  {icon:'🗣',name:'Teach-Back Notes',desc:'ADHD: say it out loud in writing',
-   fields:[{key:'lesson',label:'Lesson/Chapter',placeholder:'e.g. Newton Laws',default:''}],
-   content:`<h1>🗣 Teach-Back — {{lesson}}</h1><p style="color:var(--t3);font-size:13px;font-style:italic">Pretend you're teaching this to a friend. Write what you'd say.</p><h2>The main point is…</h2><p></p><h2>A good analogy is…</h2><p></p><h2>Step by step, it works like this…</h2><ol><li></li><li></li><li></li></ol><h2>The most confusing part is…</h2><p></p><h2>A quick test question:</h2><p><strong>Q:</strong> </p><p><strong>A:</strong> </p>`},
+  // ── CREATIVE ──
+  {cat:'Creative',icon:'✍️',name:'Story Outline',desc:'Fiction / story structure',
+   fields:[{key:'title',label:'Story Title',placeholder:'e.g. The Last Signal',default:''}],
+   content:`<h1>✍️ {{title}}</h1><h2>🌍 World / Setting</h2><p></p><h2>👥 Characters</h2><table><tr><th>Name</th><th>Role</th><th>Motivation</th></tr><tr><td></td><td>Protagonist</td><td></td></tr><tr><td></td><td>Antagonist</td><td></td></tr></table><h2>📖 Plot (3 Acts)</h2><h3>Act 1 — Setup</h3><p></p><h3>Act 2 — Confrontation</h3><p></p><h3>Act 3 — Resolution</h3><p></p><h2>🎯 Theme</h2><p></p>`},
+  {cat:'Creative',icon:'🎬',name:'Script / Screenplay',desc:'Scene-by-scene script',
+   fields:[{key:'title',label:'Title',placeholder:'e.g. Episode 1',default:''}],
+   content:`<h1>🎬 {{title}}</h1><h2>INT. LOCATION — DAY</h2><p><em>Scene description.</em></p><p><strong>CHARACTER NAME</strong></p><p>Dialogue goes here.</p><h2>EXT. LOCATION — NIGHT</h2><p><em>Scene description.</em></p>`},
+  {cat:'Creative',icon:'🎵',name:'Song / Lyrics',desc:'Song structure template',
+   fields:[{key:'title',label:'Song Title',placeholder:'e.g. Midnight Drive',default:''}],
+   content:`<h1>🎵 {{title}}</h1><h2>Verse 1</h2><p></p><h2>Pre-Chorus</h2><p></p><h2>Chorus</h2><p></p><h2>Verse 2</h2><p></p><h2>Bridge</h2><p></p><h2>Outro</h2><p></p><hr><h2>📝 Notes / chord progression</h2><p></p>`},
+  {cat:'Creative',icon:'🎨',name:'Design Brief',desc:'Creative project brief',
+   fields:[{key:'project',label:'Project',placeholder:'e.g. Logo for Acme Co.',default:''}],
+   content:`<h1>🎨 Design Brief: {{project}}</h1><h2>🎯 Objective</h2><p></p><h2>👤 Target Audience</h2><p></p><h2>🎨 Visual Direction</h2><ul><li>Mood: </li><li>Colors: </li><li>Typography: </li></ul><h2>📦 Deliverables</h2><ul><li></li></ul><h2>📅 Timeline</h2><p></p><h2>🚫 Don'ts</h2><ul><li></li></ul>`},
 
-  {icon:'⚡',name:'Quick Review',desc:'ADHD: rapid-fire 10-min review',
-   fields:[{key:'topic',label:'Topic',placeholder:'e.g. Algebra basics',default:''}],
-   content:`<h1>⚡ Quick Review — {{topic}}</h1><p style="color:var(--t3);font-size:12px">⏱ Set a timer for 10 min. Don't overthink.</p><h2>3 main ideas I remember:</h2><ol><li></li><li></li><li></li></ol><h2>2 things I'm unsure about:</h2><ul><li></li><li></li></ul><h2>1 question I still have:</h2><p></p><h2>Rate your confidence: </h2><p>⭐☆☆☆☆ &nbsp; ⭐⭐☆☆☆ &nbsp; ⭐⭐⭐☆☆ &nbsp; ⭐⭐⭐⭐☆ &nbsp; ⭐⭐⭐⭐⭐</p>`},
-
-  {icon:'📊',name:'Comparison Notes',desc:'ADHD: side-by-side comparison',
-   fields:[{key:'item1',label:'Item 1',placeholder:'e.g. Photosynthesis',default:'Topic A'},{key:'item2',label:'Item 2',placeholder:'e.g. Cellular Respiration',default:'Topic B'}],
-   content:`<h1>📊 Compare: {{item1}} vs {{item2}}</h1><table><tr><th>Aspect</th><th>{{item1}}</th><th>{{item2}}</th></tr><tr><td>Definition</td><td></td><td></td></tr><tr><td>How it works</td><td></td><td></td></tr><tr><td>Where it happens</td><td></td><td></td></tr><tr><td>Key molecules</td><td></td><td></td></tr><tr><td>End products</td><td></td><td></td></tr></table><h2>✅ Similarities</h2><ul><li></li></ul><h2>❌ Key Differences</h2><ul><li></li></ul><h2>💡 Memory trick</h2><p></p>`},
-
-  {icon:'🗓',name:'Study Schedule',desc:'ADHD: plan your study week',
-   fields:[{key:'exam',label:'Exam/Goal',placeholder:'e.g. Biology Final',default:''},{key:'date',label:'Exam Date',placeholder:'e.g. March 20',default:''}],
-   content:`<h1>🗓 Study Plan — {{exam}}</h1><p style="color:var(--t3);font-size:12px">Exam date: <strong>{{date}}</strong></p><table><tr><th>Day</th><th>Topic</th><th>Time</th><th>Done?</th></tr><tr><td>Mon</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Tue</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Wed</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Thu</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Fri</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Sat</td><td></td><td>__ min</td><td>☐</td></tr><tr><td>Sun</td><td></td><td>__ min</td><td>☐</td></tr></table><h2>🎯 Priority topics</h2><ol><li></li><li></li><li></li></ol><h2>✅ Resources I have</h2><ul><li></li></ul>`},
-
-  {icon:'🔑',name:'Key Terms Glossary',desc:'ADHD: vocabulary & definitions',
-   fields:[{key:'subject',label:'Subject',placeholder:'e.g. Chemistry Unit 2',default:''}],
-   content:`<h1>🔑 Key Terms — {{subject}}</h1><p style="color:var(--t3);font-size:13px">Write definitions in YOUR own words — not from the textbook</p><table><tr><th>Term</th><th>Definition (my words)</th><th>Memory hook / image</th></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table><h2>🧠 Connections between terms</h2><p></p>`},
-
-  // ── CLASSIC TEMPLATES ──
-  {icon:'🗒',name:'Meeting Notes',desc:'Agenda, notes, actions',
-   fields:[{key:'meeting',label:'Meeting Name',placeholder:'e.g. Team Standup',default:''},{key:'date',label:'Date',placeholder:'e.g. March 9',default:''}],
-   content:`<h1>🗒 {{meeting}}</h1><p style="color:var(--t3);font-size:12px">{{date}}</p><h2>📋 Agenda</h2><ul><li></li><li></li></ul><h2>📝 Notes</h2><p></p><h2>✅ Action Items</h2><ul><li>[ ] Task — @person</li></ul>`},
-
-  {icon:'🗺',name:'Project Plan',desc:'Goals, tasks, timeline',
-   fields:[{key:'project',label:'Project Name',placeholder:'e.g. App Redesign',default:''}],
-   content:`<h1>🗺 {{project}}</h1><h2>🎯 Goal</h2><p></p><h2>📅 Timeline</h2><table><tr><th>Phase</th><th>Duration</th><th>Owner</th></tr><tr><td></td><td></td><td></td></tr></table><h2>✅ Tasks</h2><ul><li></li></ul>`},
-
-  {icon:'📚',name:'Reading Notes',desc:'Book/article summary',
-   fields:[{key:'title',label:'Book/Article Title',placeholder:'e.g. Atomic Habits',default:''},{key:'author',label:'Author',placeholder:'e.g. James Clear',default:''}],
-   content:`<h1>📚 {{title}}</h1><p style="color:var(--t3)">by {{author}}</p><h2>💡 Key Ideas</h2><ul><li></li></ul><h2>📝 Notes by Chapter</h2><h3>Chapter 1</h3><p></p><h2>🌟 Favourite Quotes</h2><blockquote></blockquote><h2>🔄 How I'll apply this</h2><p></p>`},
-
-  {icon:'🔬',name:'Research Notes',desc:'Topic deep-dive',
-   fields:[{key:'topic',label:'Research Topic',placeholder:'e.g. Climate Change Solutions',default:''}],
-   content:`<h1>🔬 Research: {{topic}}</h1><h2>❓ Key Questions</h2><ul><li></li></ul><h2>📚 Sources</h2><ul><li><a href="#">Source 1</a></li></ul><h2>💡 Insights</h2><p></p><h2>🏁 Conclusion</h2><p></p>`},
+  // ── PERSONAL ──
+  {cat:'Personal',icon:'🍳',name:'Recipe',desc:'Ingredients and steps',
+   fields:[{key:'recipe',label:'Recipe Name',placeholder:'e.g. Pasta Carbonara',default:''}],
+   content:`<h1>🍳 {{recipe}}</h1><p><em>Prep: ___ min | Cook: ___ min | Serves: ___</em></p><h2>🛒 Ingredients</h2><ul><li></li><li></li></ul><h2>👨‍🍳 Instructions</h2><ol><li></li><li></li><li></li></ol><h2>📝 Notes / Variations</h2><p></p>`},
+  {cat:'Personal',icon:'🧳',name:'Travel Planner',desc:'Trip planning template',
+   fields:[{key:'dest',label:'Destination',placeholder:'e.g. Tokyo, Japan',default:''},{key:'dates',label:'Dates',placeholder:'e.g. April 5-12',default:''}],
+   content:`<h1>🧳 Trip: {{dest}} — {{dates}}</h1><h2>✈️ Flights / Transport</h2><p></p><h2>🏨 Accommodation</h2><p></p><h2>📅 Day-by-Day Plan</h2><h3>Day 1</h3><ul><li></li></ul><h3>Day 2</h3><ul><li></li></ul><h2>📌 Must-See / Do</h2><ul><li></li></ul><h2>💰 Budget</h2><table><tr><th>Item</th><th>Est.</th><th>Actual</th></tr><tr><td>Flights</td><td></td><td></td></tr><tr><td>Hotel</td><td></td><td></td></tr></table>`},
+  {cat:'Personal',icon:'💪',name:'Fitness Log',desc:'Workout tracking',
+   fields:[{key:'week',label:'Week of',placeholder:'e.g. March 10',default:''}],
+   content:`<h1>💪 Fitness Log — {{week}}</h1><table><tr><th>Day</th><th>Workout</th><th>Sets × Reps</th><th>Notes</th></tr><tr><td>Mon</td><td></td><td></td><td></td></tr><tr><td>Tue</td><td>Rest</td><td>—</td><td></td></tr><tr><td>Wed</td><td></td><td></td><td></td></tr><tr><td>Thu</td><td></td><td></td><td></td></tr><tr><td>Fri</td><td></td><td></td><td></td></tr><tr><td>Sat</td><td>Rest</td><td>—</td><td></td></tr><tr><td>Sun</td><td></td><td></td><td></td></tr></table>`},
+  {cat:'Personal',icon:'🎯',name:'Goal Setting',desc:'SMART goals tracker',
+   fields:[{key:'period',label:'Period',placeholder:'e.g. Q2 2025',default:''}],
+   content:`<h1>🎯 Goals — {{period}}</h1><h2>⭐ Big Rocks (3 max)</h2><ol><li></li><li></li><li></li></ol><h2>📋 SMART Goal Breakdown</h2><h3>Goal 1</h3><table><tr><th>SMART</th><th>Details</th></tr><tr><td>Specific</td><td></td></tr><tr><td>Measurable</td><td></td></tr><tr><td>Achievable</td><td></td></tr><tr><td>Relevant</td><td></td></tr><tr><td>Time-bound</td><td></td></tr></table><h2>📊 Monthly Check-In</h2><table><tr><th>Month</th><th>Progress</th><th>Notes</th></tr><tr><td>Month 1</td><td></td><td></td></tr></table>`},
+  {cat:'Personal',icon:'💰',name:'Budget Tracker',desc:'Monthly budget template',
+   fields:[{key:'month',label:'Month',placeholder:'e.g. March 2025',default:''}],
+   content:`<h1>💰 Budget — {{month}}</h1><h2>💵 Income</h2><table><tr><th>Source</th><th>Amount</th></tr><tr><td>Salary</td><td></td></tr><tr><td>Other</td><td></td></tr></table><h2>💸 Expenses</h2><table><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Diff</th></tr><tr><td>Rent/Mortgage</td><td></td><td></td><td></td></tr><tr><td>Food</td><td></td><td></td><td></td></tr><tr><td>Transport</td><td></td><td></td><td></td></tr><tr><td>Utilities</td><td></td><td></td><td></td></tr><tr><td>Entertainment</td><td></td><td></td><td></td></tr><tr><td>Savings</td><td></td><td></td><td></td></tr></table>`},
 ];
 
-// Export/import all data
-function doExport(){
-  const pg=A.activePage?(A.pages[A.activeNotebook]||[]).find(p=>p.id===A.activePage):null;
-  if(pg?.type==='rich'){
-    const blob=new Blob([document.getElementById('eb')?.innerHTML||pg.content||''],{type:'text/html'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=pg.name+'.html';a.click();
-  } else if(pg?.type==='code'){
-    const ext={javascript:'js',python:'py',java:'java','c++':'cpp',c:'c',rust:'rs',go:'go',html:'html',css:'css',sql:'sql',bash:'sh',typescript:'ts'}[pg.codeLang||'javascript']||'txt';
-    const blob=new Blob([document.getElementById('ce')?.value||pg.codeContent||''],{type:'text/plain'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=pg.name+'.'+ext;a.click();
-  } else if(pg?.type==='finite'){
-    const cv=document.getElementById('cv');
-    if(cv){const a=document.createElement('a');a.download=pg.name+'.png';a.href=cv.toDataURL('image/png');a.click();}
+// ── showTemplates → categorized view ──
+function showTemplates(){
+  const cats=Object.keys(TEMPLATE_CATS);
+  let html=`<h2>📋 Templates</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="tpl-cat-tabs">`;
+  html+=`<button class="tpl-tab on" onclick="filterTplCat(null,this)">All</button>`;
+  cats.forEach(c=>html+=`<button class="tpl-tab" onclick="filterTplCat('${c}',this)">${TEMPLATE_CATS[c].icon} ${c}</button>`);
+  html+=`</div><div class="template-grid" id="tpl-grid"></div>
+    <div class="mbtns"><button class="bs" onclick="closeModal()">Cancel</button></div>`;
+  showModal(html);
+  renderTplGrid(null);
+}
+
+function filterTplCat(cat,btn){
+  document.querySelectorAll('.tpl-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderTplGrid(cat);
+}
+function renderTplGrid(cat){
+  const grid=document.getElementById('tpl-grid');if(!grid) return;
+  const items=cat?ALL_TEMPLATES.filter(t=>t.cat===cat):ALL_TEMPLATES;
+  grid.innerHTML=items.map((t,i)=>``+
+    `<div class="template-card" onclick="applyTemplate(${ALL_TEMPLATES.indexOf(t)})">
+      <div style="font-size:20px;margin-bottom:4px">${t.icon}</div>
+      <h3>${t.name}</h3>
+      <p>${t.desc}</p>
+      ${t.cat!=='Blank'?`<div style="font-size:10px;margin-top:4px;opacity:.6">${TEMPLATE_CATS[t.cat]?.icon||''} ${t.cat}</div>`:''}
+    </div>`).join('');
+}
+
+function applyTemplate(i){
+  const t=ALL_TEMPLATES[i];
+  if(!t) return;
+  if(t.fields&&t.fields.length){
+    showTplFillIn(window._addPageType||'rich', window._addPageName||t.name, t);
+    return;
   }
+  const body=document.getElementById('eb');
+  if(body){body.innerHTML=t.content;if(_curPg){_curPg.content=t.content;saveA();}}
+  closeModal();
 }
-function exportAllJSON(){
-  const d=exportData();
-  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='simpletonnote_backup.json';a.click();
-  toast('📦 Exported backup JSON');
-}
-function handleImport(files){
-  const f=files[0];
-  if(!f) return;
-  const ext=f.name.split('.').pop().toLowerCase();
-  const reader=new FileReader();
-  if(ext==='json'||ext==='stn'){
-    reader.onload=e=>{try{const d=JSON.parse(e.target.result);importAll(d);}catch(err){toast('❌ Invalid JSON file');}};
-    reader.readAsText(f);
-  } else if(['txt','md','html'].includes(ext)){
-    reader.onload=e=>{
-      const nb=A.notebooks[0]||{id:'nb'+Date.now(),name:'Imported',icon:'📥',project:A.currentProject};
-      if(!A.notebooks.find(n=>n.id===nb.id)) A.notebooks.push(nb);
-      if(!A.pages[nb.id]) A.pages[nb.id]=[];
-      A.pages[nb.id].push({id:'pg'+Date.now(),name:f.name.replace(/\.[^.]+$/,''),type:'rich',content:'<p>'+esc(e.target.result).replace(/\n/g,'</p><p>')+'</p>'});
-      saveA();renderSB();toast('✅ Imported '+f.name);
-    };
-    reader.readAsText(f);
-  } else if(f.type.startsWith('image/')){
-    reader.onload=e=>{
-      const nb=A.notebooks[0];
-      if(!nb) return;
-      if(!A.pages[nb.id]) A.pages[nb.id]=[];
-      A.pages[nb.id].push({id:'pg'+Date.now(),name:f.name,type:'rich',content:`<img src="${e.target.result}" style="max-width:100%">`});
-      saveA();renderSB();toast('✅ Imported image');
-    };
-    reader.readAsDataURL(f);
-  } else {
-    toast('File type not directly supported. Use JSON export for full import.');
-  }
-}
-function importAll(d){
-  merge(d);saveA();applySettings();renderSB();toast('✅ Import complete!');
-}
+

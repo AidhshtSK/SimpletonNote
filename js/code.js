@@ -14,17 +14,16 @@ function openCode(pg){
         <option>c</option><option>rust</option><option>go</option><option>html</option>
         <option>css</option><option>sql</option><option>bash</option><option>typescript</option>
       </select>
-      <button class="ib" onclick="runCode()" style="color:var(--gr)">▶ Run</button>
+
     </div>
-    <div class="code-panels">
+    <div class="code-panels" style="position:relative">
       <textarea id="ce" placeholder="// Write your code here…" spellcheck="false"></textarea>
+      <pre id="ce-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;margin:0;padding:20px;pointer-events:none;font-family:'DM Mono',monospace;font-size:14px;line-height:1.6;overflow:auto;background:transparent;border:none;display:none;white-space:pre-wrap;word-wrap:break-word"></pre>
       <div id="crp">
-        <div class="ptabs">
-          <button class="ptab on" id="ptab-out" onclick="showPTab('out')">Output</button>
-          <button class="ptab" id="ptab-note" onclick="showPTab('note')">Notes</button>
+        <div class="ptabs" style="display:none">
+          <button class="ptab on" id="ptab-note" onclick="showPTab('note')">Notes</button>
         </div>
-        <div id="cro" style="display:block"></div>
-        <textarea id="cno" placeholder="Notes about this code…"></textarea>
+        <textarea id="cno" placeholder="Notes about this code…" style="display:block"></textarea>
       </div>
     </div>
   </div>`;
@@ -34,8 +33,10 @@ function openCode(pg){
   ce.addEventListener('input',()=>{pg.codeContent=ce.value;clearTimeout(_asTimer);_asTimer=setTimeout(saveA,700);});
   ce.addEventListener('keydown',e=>{
     if(e.key==='Tab'){e.preventDefault();const s=ce.selectionStart,en=ce.selectionEnd;ce.value=ce.value.slice(0,s)+'  '+ce.value.slice(en);ce.selectionStart=ce.selectionEnd=s+2;}
-    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCode();}
   });
+  // Apply Prism highlighting overlay when focus leaves textarea
+  ce.addEventListener('blur',()=>applyPrismOverlay(pg));
+  ce.addEventListener('focus',()=>hidePrismOverlay());
   const cno=document.getElementById('cno');
   cno.value=pg.notes||'';
   cno.addEventListener('input',()=>{pg.notes=cno.value;clearTimeout(_asTimer);_asTimer=setTimeout(saveA,700);});
@@ -65,6 +66,27 @@ function runCode(){
   out.innerHTML=logs.map(l=>`<div style="color:${l.t==='err'?'var(--rd)':l.t==='warn'?'var(--yw)':l.t==='ret'?'var(--cy)':'var(--gr)'};margin-bottom:3px;white-space:pre-wrap;word-break:break-word">${esc(l.m)}</div>`).join('')
     ||'<div style="color:var(--t3)">(no output)</div>';
 }
+function applyPrismOverlay(pg){
+  const ce=document.getElementById('ce');
+  const over=document.getElementById('ce-overlay');
+  if(!ce||!over) return;
+  const lang=(document.getElementById('cd-lang')?.value||'javascript').replace('c++','cpp').replace('html','markup');
+  over.className=`language-${lang}`;
+  over.textContent=ce.value;
+  if(typeof Prism!=='undefined') Prism.highlightElement(over);
+  over.style.display='block';
+  ce.style.color='transparent';
+  ce.style.caretColor='var(--t)';
+}
+function hidePrismOverlay(){
+  const ce=document.getElementById('ce');
+  const over=document.getElementById('ce-overlay');
+  if(!ce||!over) return;
+  over.style.display='none';
+  ce.style.color='';
+}
+
+
 
 // ═══════════════════════════════════════════
 // QUIZ PAGE TYPE
@@ -238,3 +260,5 @@ function renderQZFinish(pg){
     </div>
   </div>`;
 }
+
+
